@@ -226,13 +226,20 @@ async fn run(miniserve_config: MiniserveConfig) -> Result<(), StartupError> {
             .collect::<Vec<_>>()
     };
 
-    if let Some(tailscale_dns_name) = miniserve_config.tailscale_dns_name.as_ref() {
-        let tailscale_dns_url = format!(
-            "{protocol}://{}:{}{}",
-            tailscale_dns_name, miniserve_config.port, miniserve_config.route_prefix
-        );
-        if !display_urls.contains(&tailscale_dns_url) {
-            display_urls.insert(0, tailscale_dns_url);
+    // When using Tailscale, show only the IPv4 URL — it's clickable on
+    // messaging surfaces (Telegram, etc.) unlike .ts.net DNS names or IPv6.
+    if miniserve_config.tailscale_dns_name.is_some() {
+        let prefix = format!("{protocol}://");
+        if let Some(ipv4_url) = display_urls
+            .iter()
+            .find(|u| {
+                u.strip_prefix(&prefix)
+                    .map(|rest| rest.as_bytes().first().is_some_and(|b| b.is_ascii_digit()) && !rest.starts_with('['))
+                    .unwrap_or(false)
+            })
+            .cloned()
+        {
+            display_urls = vec![ipv4_url];
         }
     }
 
