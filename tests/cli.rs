@@ -3,6 +3,7 @@ use std::process::Command;
 use assert_cmd::{cargo, prelude::*};
 use clap::{ValueEnum, crate_name, crate_version};
 use clap_complete::Shell;
+use predicates::str::contains;
 
 mod fixtures;
 
@@ -53,6 +54,19 @@ fn print_completions_invalid_shell() -> Result<(), Error> {
         .arg("fakeshell")
         .assert()
         .failure();
+
+    Ok(())
+}
+
+#[test]
+fn tailscale_conflicts_with_interfaces() -> Result<(), Error> {
+    Command::new(cargo::cargo_bin!("miniserve"))
+        .arg("--tailscale")
+        .arg("-i")
+        .arg("127.0.0.1")
+        .assert()
+        .failure()
+        .stderr(contains("cannot be used with"));
 
     Ok(())
 }

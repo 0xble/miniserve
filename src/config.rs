@@ -19,6 +19,7 @@ use crate::{
     file_utils::sanitize_path,
     listing::{SortingMethod, SortingOrder},
     renderer::ThemeSlug,
+    tailscale,
 };
 
 /// Possible characters for random routes
@@ -43,6 +44,9 @@ pub struct MiniserveConfig {
 
     /// IP address(es) on which miniserve will be available
     pub interfaces: Vec<IpAddr>,
+
+    /// Optional MagicDNS name discovered from Tailscale status
+    pub tailscale_dns_name: Option<String>,
 
     /// Enable HTTP basic authentication
     pub auth: Vec<RequiredAuth>,
@@ -205,13 +209,19 @@ pub struct MiniserveConfig {
 impl MiniserveConfig {
     /// Parses the command line arguments
     pub fn try_from_args(args: CliArgs) -> Result<Self> {
-        let interfaces = if !args.interfaces.is_empty() {
-            args.interfaces
+        let (interfaces, tailscale_dns_name) = if args.tailscale {
+            let tailscale_info = tailscale::resolve_tailscale_info()?;
+            (tailscale_info.ips, tailscale_info.dns_name)
+        } else if !args.interfaces.is_empty() {
+            (args.interfaces, None)
         } else {
-            vec![
-                IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
-                IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            ]
+            (
+                vec![
+                    IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
+                    IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+                ],
+                None,
+            )
         };
 
         let route_prefix = match (args.route_prefix, args.random_route) {
@@ -330,6 +340,7 @@ impl MiniserveConfig {
             temp_upload_directory: args.temp_upload_directory,
             port,
             interfaces,
+            tailscale_dns_name,
             auth,
             path_explicitly_chosen,
             no_symlinks: args.no_symlinks,

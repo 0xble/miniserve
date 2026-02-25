@@ -119,6 +119,17 @@ pub struct CliArgs {
     )]
     pub interfaces: Vec<IpAddr>,
 
+    /// Bind only to Tailscale addresses (private tailnet access)
+    ///
+    /// This resolves local Tailscale IPs and binds only to those addresses.
+    /// Requires the `tailscale` CLI to be installed and connected.
+    #[arg(
+        long = "tailscale",
+        conflicts_with = "interfaces",
+        env = "MINISERVE_TAILSCALE"
+    )]
+    pub tailscale: bool,
+
     /// Set authentication
     ///
     /// Currently supported formats:

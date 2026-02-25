@@ -37,6 +37,7 @@ mod file_utils;
 mod listing;
 mod pipe;
 mod renderer;
+mod tailscale;
 mod webdav_fs;
 
 use crate::args::LogColor;
@@ -185,7 +186,13 @@ async fn run(miniserve_config: MiniserveConfig) -> Result<(), StartupError> {
         }
     }
 
-    let display_urls = {
+    let protocol = if miniserve_config.tls_rustls_config.is_some() {
+        "https"
+    } else {
+        "http"
+    };
+
+    let mut display_urls = {
         let (mut ifaces, wildcard): (Vec<_>, Vec<_>) = miniserve_config
             .interfaces
             .clone()
@@ -214,13 +221,20 @@ async fn run(miniserve_config: MiniserveConfig) -> Result<(), StartupError> {
                 IpAddr::V4(_) => format!("{}:{}", addr, miniserve_config.port),
                 IpAddr::V6(_) => format!("[{}]:{}", addr, miniserve_config.port),
             })
-            .map(|addr| match miniserve_config.tls_rustls_config {
-                Some(_) => format!("https://{addr}"),
-                None => format!("http://{addr}"),
-            })
+            .map(|addr| format!("{protocol}://{addr}"))
             .map(|url| format!("{}{}", url, miniserve_config.route_prefix))
             .collect::<Vec<_>>()
     };
+
+    if let Some(tailscale_dns_name) = miniserve_config.tailscale_dns_name.as_ref() {
+        let tailscale_dns_url = format!(
+            "{protocol}://{}:{}{}",
+            tailscale_dns_name, miniserve_config.port, miniserve_config.route_prefix
+        );
+        if !display_urls.contains(&tailscale_dns_url) {
+            display_urls.insert(0, tailscale_dns_url);
+        }
+    }
 
     let socket_addresses = miniserve_config
         .interfaces

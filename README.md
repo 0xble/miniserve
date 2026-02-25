@@ -61,6 +61,10 @@ Sometimes this is just a more practical and quick way than doing things properly
 
     miniserve -i 192.168.0.1 -i 10.13.37.10 -i ::1 /tmp/myshare
 
+### Bind to Tailscale only:
+
+    miniserve --tailscale /tmp/myshare
+
 ### Insert custom headers
 
     miniserve --header "Cache-Control:no-cache" --header "X-Custom-Header:custom-value" -p 8080 /tmp/myshare
@@ -200,6 +204,14 @@ Options:
           Interface to listen on
 
           [env: MINISERVE_INTERFACE=]
+
+      --tailscale
+          Bind only to Tailscale addresses (private tailnet access)
+
+          This resolves local Tailscale IPs and binds only to those addresses.
+          Requires the `tailscale` CLI to be installed and connected.
+
+          [env: MINISERVE_TAILSCALE=]
 
   -a, --auth <AUTH>
           Set authentication
@@ -563,6 +575,8 @@ It will also do that if explicitly provided with `-i 0.0.0.0` or `-i ::`.
 In all of the aforementioned cases, it will bind on both IPv4 and IPv6.
 If provided with an explicit non-default interface, it will ONLY bind to that interface.
 You can provide `-i` multiple times to bind to multiple interfaces at the same time.
+If `--tailscale` is used, miniserve resolves local Tailscale addresses and binds only to those
+addresses (private tailnet access only). `--tailscale` cannot be combined with `-i/--interfaces`.
 
 ## Why use this over alternatives?
 
